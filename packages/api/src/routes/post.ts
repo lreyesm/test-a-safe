@@ -1,24 +1,26 @@
 import { FastifyInstance } from 'fastify';
 import { PrismaClient } from '@prisma/client';
-import { createUserSchema, updateUserSchema } from '../schemas/user.schema';
+import { createPostSchema, updatePostSchema } from '../schemas/post.schema';
 import { z } from 'zod';
 
 const prisma = new PrismaClient();
 
-export default async function userRoutes(app: FastifyInstance) {
-    // Get all users
+export default async function postRoutes(app: FastifyInstance) {
+    // Get all posts
     app.get('/', async () => {
-        return await prisma.user.findMany();
+        return await prisma.post.findMany({
+            include: { author: true }, // Include related user data
+        });
     });
     
-    // Create a new user
+    // Create a new post
     app.post('/', async (request, reply) => {
         try {
             // Validate request body with Zod schema
-            const data = createUserSchema.parse(request.body);
-            
-            const user = await prisma.user.create({ data });
-            reply.code(201).send(user);
+            const data = createPostSchema.parse(request.body);
+        
+            const post = await prisma.post.create({ data });
+            reply.code(201).send(post);
         } catch (error) {
             if (error instanceof z.ZodError) {
                 reply.code(400).send({ error: error.errors });
@@ -28,19 +30,19 @@ export default async function userRoutes(app: FastifyInstance) {
         }
     });
     
-    // Update a user
+    // Update a post
     app.put('/:id', async (request, reply) => {
         try {
             const { id } = request.params as { id: string };
             
             // Validate request body with Zod schema
-            const data = updateUserSchema.parse(request.body);
+            const data = updatePostSchema.parse(request.body);
             
-            const user = await prisma.user.update({
+            const post = await prisma.post.update({
                 where: { id: parseInt(id) },
                 data,
             });
-            reply.code(200).send(user);
+            reply.code(200).send(post);
         } catch (error) {
             if (error instanceof z.ZodError) {
                 reply.code(400).send({ error: error.errors });
@@ -50,15 +52,15 @@ export default async function userRoutes(app: FastifyInstance) {
         }
     });
     
-    // Delete a user
+    // Delete a post
     app.delete('/:id', async (request, reply) => {
         try {
             const { id } = request.params as { id: string };
             
-            await prisma.user.delete({ where: { id: parseInt(id) } });
+            await prisma.post.delete({ where: { id: parseInt(id) } });
             reply.code(204).send();
         } catch (error) {
-            reply.code(404).send({ error: 'User not found' });
+            reply.code(404).send({ error: 'Post not found' });
         }
     });
 }
