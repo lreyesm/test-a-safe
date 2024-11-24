@@ -12,9 +12,15 @@ import authRoutes from './routes/auth';
 
 const app = Fastify({ logger: true });
 
+// Get the JWT secret key from the environment variables
+const jwtSecret = process.env.JWT_SECRET;
+if (!jwtSecret) {
+    throw new Error('JWT_SECRET is not defined in .env');
+}
+
 // Configuración de JWT
 app.register(fastifyJWT, {
-    secret: 'your-secret-key', // Cambia esto por una clave segura
+    secret: jwtSecret, // Cambia esto por una clave segura
 });
 
 //Routes
