@@ -1,13 +1,19 @@
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import fs from 'fs/promises';
-import path from 'path';
-import { randomUUID } from 'crypto';
-import { PrismaClient } from '@prisma/client';
+import { validateFile, generateFilePaths, saveFile, updateUserProfilePicture, handleProfilePictureUpload } from '../services/upload.service';
+import { handleHttpError } from '../services/error.service';
 
-const prisma = new PrismaClient();
-
+/**
+ * Upload-related HTTP routes for Fastify.
+ * 
+ * This module handles profile picture uploads for authenticated users.
+ * 
+ * @param app - The Fastify instance.
+ */
 export default async function uploadRoutes(app: FastifyInstance) {
-    // Middleware for authentication
+    /**
+     * Middleware for authentication.
+     * Ensures all routes are protected by verifying the JWT token.
+     */
     app.addHook('preHandler', async (request: FastifyRequest, reply: FastifyReply) => {
         try {
             await request.jwtVerify(); // Verify JWT token
@@ -16,56 +22,30 @@ export default async function uploadRoutes(app: FastifyInstance) {
         }
     });
 
-    // Upload profile picture
+    /**
+     * Route to upload a user's profile picture.
+     * 
+     * This endpoint allows authenticated users to upload a profile picture.
+     * The file is validated for type and size, saved locally, and its URL is updated in the database.
+     * 
+     * @route POST /uploads/profile-picture
+     * @body { file } - The uploaded file.
+     * @response { message: string, url: string } - Confirmation of the upload and the file's public URL.
+     */
     app.post('/profile-picture', async (req: any, reply) => {
-        const data = await req.file();
-        const user = req.user as { id: number }; // Assuming JWT payload contains the user ID
-    
-        if (!data) {
-            reply.code(400).send({ message: 'No file uploaded' });
-            return;
-        }
-    
-        // Validate file type
-        const validTypes = ['image/jpeg', 'image/png'];
-        if (!validTypes.includes(data.mimetype)) {
-            reply.code(400).send({ message: 'Invalid file type. Only JPG and PNG are allowed.' });
-            return;
-        }
-    
-        // Validate file size (max 5MB)
-        const maxFileSize = 5 * 1024 * 1024; // 5MB
-        if (data.file.bytesRead > maxFileSize) {
-            reply.code(400).send({ message: 'File size exceeds the 5MB limit.' });
-            return;
-        }
-    
-        // Generate a unique filename and path for the user's ID
-        const fileExtension = path.extname(data.filename);
-        const uniqueFilename = `${randomUUID()}${fileExtension}`;
-        const userDirectory = path.join(__dirname, '../../uploads/profiles', `${user.id}`);
-        const uploadPath = path.join(userDirectory, uniqueFilename);
-        const fileUrl = `/uploads/profiles/${user.id}/${uniqueFilename}`;
-    
+        const file = await req.file();
+        const user = req.user as { id: number }; 
+
+        if (!file) return reply.code(400).send({ error: 'No file uploaded' });
+
         try {
-            // Save the file locally
-            await fs.mkdir(userDirectory, { recursive: true });
-            await fs.writeFile(uploadPath, await data.toBuffer());
-    
-            // Update user's profilePicture field in the database
-            await prisma.user.update({
-                where: { id: user.id },
-                data: { profilePicture: fileUrl },
-            });
-    
-            reply.code(200).send({
-                message: 'Profile picture uploaded successfully',
-                url: fileUrl,
-            });
-        } catch (err) {
-            console.error('Error uploading file:', err);
-            reply.code(500).send({ error: 'Failed to upload profile picture' });
+            const fileUrl = await handleProfilePictureUpload(file, user.id);
+
+            const message = 'Profile picture uploaded successfully';
+            reply.code(200).send({ message: message, url: fileUrl });
+
+        } catch (error) {
+            handleHttpError(reply, error, 'Failed to upload profile picture');
         }
     });
-    
 }

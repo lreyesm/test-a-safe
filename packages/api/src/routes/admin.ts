@@ -1,84 +1,80 @@
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import { PrismaClient } from '@prisma/client';
-import { createUserSchema } from '../schemas/user.schema';
-import { z } from 'zod';
-import bcrypt from 'bcryptjs';
-import { excludePasswordSelect } from '../../../utils/user';
-
-const prisma = new PrismaClient();
+import { 
+    validateUserData,
+    hashPassword,
+    createUserInDB,
+    verifyAdminPrivileges,
+    performAdminActionService,
+    fetchAdminDashboardService,
+} from '../services/admin.service';
+import { handleHookError, handleServiceError } from '../services/error.service';
 
 export default async function adminRoutes(app: FastifyInstance) {
-
-    // Middleware global para proteger todas las rutas en /admin
+    /**
+     * Global middleware to protect admin routes.
+     * Ensures the user is authenticated and has admin privileges.
+     */
     app.addHook('preHandler', async (request, reply) => {
         try {
-            // Verifica el token
+            // Verify the JWT token
             await request.jwtVerify();
 
-            // Autoriza solo a usuarios con el rol "admin"
+            // Check if the user has admin privileges
             const user = request.user as { role: string };
-            if (user.role !== 'admin') {
-                reply.code(403).send({ error: 'Forbidden: Admins only' });
-            }
+            verifyAdminPrivileges(user.role);
         } catch (err) {
-            reply.code(401).send({ error: 'Unauthorized' });
+            handleHookError(err, reply, 'Forbidden: Admins only');
         }
     });
 
-    // Ejemplo de ruta protegida para administradores
+    /**
+     * Perform an administrative action.
+     * @route POST /admin/action
+     * @returns A success message if the action is performed successfully.
+     */
     app.post('/action', async (request: FastifyRequest, reply: FastifyReply) => {
         try {
-            // Acción administrativa aquí
-            reply.send({ message: 'Admin action successfully performed' });
+            const result = await performAdminActionService();
+            reply.send(result);
         } catch (error) {
-            reply.code(500).send({ error: 'Failed to perform admin action' });
+            handleServiceError(error, reply, 'Failed to perform admin action');
         }
     });
 
-    // Otra ruta de ejemplo para administradores
+    /**
+     * Fetch the admin dashboard.
+     * @route GET /admin/dashboard
+     * @returns A success message with admin dashboard information.
+     */
     app.get('/dashboard', async (request: FastifyRequest, reply: FastifyReply) => {
         try {
-            // Información administrativa aquí
-            reply.send({ message: 'Welcome to the admin dashboard' });
+            const result = await fetchAdminDashboardService();
+            reply.send(result);
         } catch (error) {
-            reply.code(500).send({ error: 'Failed to load admin dashboard' });
+            handleServiceError(error, reply, 'Failed to load admin dashboard');
         }
     });
 
-    
-    // Register route
-    app.post('/register', async (request, reply) => {
+    /**
+     * Register a new user.
+     * @route POST /admin/register
+     * @param body - The user data including name, email, password, and role.
+     * @returns A success message and the created user object.
+     */
+    app.post('/register', async (request: FastifyRequest, reply: FastifyReply) => {
         try {
-            // Validate the request body using Zod
-            const validatedData = createUserSchema.parse(request.body);
-
-            // Destructure the validated data
-            const { name, email } = validatedData;
-            const { password, role } = request.body as { password: string; role?: string };
+            // Validate user data
+            const { name, email, password, role } = validateUserData(request.body as any);
 
             // Hash the password
-            const hashedPassword = await bcrypt.hash(password, 10);
+            const hashedPassword = await hashPassword(password);
 
             // Create the user in the database
-            const user = await prisma.user.create({
-                data: {
-                    name,
-                    email,
-                    password: hashedPassword, // Store the hashed password
-                    role: role || 'user', // Default to 'user'
-                },
-                select: excludePasswordSelect(),
-            });
+            const user = await createUserInDB({ name, email, hashedPassword, role: role || 'user' });
 
             reply.code(201).send({ message: 'User registered successfully', user });
         } catch (error) {
-            if (error instanceof z.ZodError) {
-                // Handle validation errors
-                reply.code(400).send({ error: error.errors });
-            } else {
-                // Handle other errors
-                reply.code(500).send({ error: 'Error creating user' });
-            }
+            handleServiceError(error, reply, 'Error creating user');
         }
     });
 }
