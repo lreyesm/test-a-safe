@@ -1,19 +1,29 @@
 import Fastify from 'fastify';
+import fastifyWebsocket, { SocketStream } from '@fastify/websocket';
 import fastifyStatic from '@fastify/static';
 import fastifyJWT from '@fastify/jwt';
 import multipart from '@fastify/multipart';
 import path from 'path';
+import WebSocket from 'ws';
 
 import userRoutes from './routes/user';
 import uploadRoutes from './routes/upload';
 import postRoutes from './routes/post';
 import adminRoutes from './routes/admin';
 import authRoutes from './routes/auth';
+import { broadcastRoutes } from './routes/broadcast';
+
+import { ensureUploadDirExists} from '../../utils/upload';
+import { broadcastNotification } from './routes/broadcast';
 
 const app = Fastify({ logger: true });
 
+ensureUploadDirExists();
+
 // Register multipart plugin
 app.register(multipart);
+
+app.register(fastifyWebsocket);
 
 // Get the JWT secret key from the environment variables
 const jwtSecret = process.env.JWT_SECRET;
@@ -38,7 +48,16 @@ app.register(userRoutes, { prefix: '/users' });
 app.register(uploadRoutes, { prefix: '/upload' });
 app.register(postRoutes, { prefix: '/posts' });
 app.register(adminRoutes, { prefix: '/admin' });
+app.register(broadcastRoutes);
 
+// Example usage of broadcastNotification (for testing purposes)
+setInterval(() => {
+    broadcastNotification('This is a broadcast notification to all clients!');
+}, 10000); // Broadcast a message every 10 seconds
+
+app.all('*', (request, reply) => {
+    reply.code(404).send({ error: 'Route not found' });
+});
 
 app.listen({ port: 3000 }, (err) => {
     if (err) {
