@@ -6,6 +6,16 @@ import { z } from 'zod';
 const prisma = new PrismaClient();
 
 export default async function postRoutes(app: FastifyInstance) {
+        
+    // Middleware global para proteger todas las rutas
+    app.addHook('preHandler', async (request, reply) => {
+        try {
+            await request.jwtVerify(); // Verifica el token
+        } catch (err) {
+            reply.code(401).send({ error: 'Unauthorized' });
+        }
+    });
+    
     // Get all posts
     app.get('/', async () => {
         return await prisma.post.findMany({

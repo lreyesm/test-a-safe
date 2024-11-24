@@ -1,66 +1,52 @@
-import { FastifyInstance } from 'fastify';
+import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { PrismaClient } from '@prisma/client';
-import { createUserSchema, updateUserSchema } from '../schemas/user.schema';
+import { createUserSchema } from '../schemas/user.schema';
 import { z } from 'zod';
 import bcrypt from 'bcryptjs';
 import { excludePasswordSelect } from '../../../utils/user';
 
 const prisma = new PrismaClient();
 
-export default async function userRoutes(app: FastifyInstance) {
-    
-    // Middleware global para proteger todas las rutas
+export default async function adminRoutes(app: FastifyInstance) {
+
+    // Middleware global para proteger todas las rutas en /admin
     app.addHook('preHandler', async (request, reply) => {
         try {
-            await request.jwtVerify(); // Verifica el token
+            // Verifica el token
+            await request.jwtVerify();
+
+            // Autoriza solo a usuarios con el rol "admin"
+            const user = request.user as { role: string };
+            if (user.role !== 'admin') {
+                reply.code(403).send({ error: 'Forbidden: Admins only' });
+            }
         } catch (err) {
             reply.code(401).send({ error: 'Unauthorized' });
         }
     });
 
-    // Get all users
-    app.get('/', async () => {
-        return await prisma.user.findMany({
-            select: excludePasswordSelect(),
-        });
-    });
-    
-    // Update a user
-    app.put('/:id', async (request, reply) => {
+    // Ejemplo de ruta protegida para administradores
+    app.post('/action', async (request: FastifyRequest, reply: FastifyReply) => {
         try {
-            const { id } = request.params as { id: string };
-            
-            // Validate request body with Zod schema
-            const data = updateUserSchema.parse(request.body);
-            
-            const user = await prisma.user.update({
-                where: { id: parseInt(id) },
-                data,
-                select: excludePasswordSelect(),
-            });
-            reply.code(200).send(user);
+            // Acción administrativa aquí
+            reply.send({ message: 'Admin action successfully performed' });
         } catch (error) {
-            if (error instanceof z.ZodError) {
-                reply.code(400).send({ error: error.errors });
-            } else {
-                reply.code(400).send({ error: 'Invalid data' });
-            }
-        }
-    });
-    
-    // Delete a user
-    app.delete('/:id', async (request, reply) => {
-        try {
-            const { id } = request.params as { id: string };
-            
-            await prisma.user.delete({ where: { id: parseInt(id) } });
-            reply.code(204).send();
-        } catch (error) {
-            reply.code(404).send({ error: 'User not found' });
+            reply.code(500).send({ error: 'Failed to perform admin action' });
         }
     });
 
-    // Create a new user
+    // Otra ruta de ejemplo para administradores
+    app.get('/dashboard', async (request: FastifyRequest, reply: FastifyReply) => {
+        try {
+            // Información administrativa aquí
+            reply.send({ message: 'Welcome to the admin dashboard' });
+        } catch (error) {
+            reply.code(500).send({ error: 'Failed to load admin dashboard' });
+        }
+    });
+
+    
+    // Register route
     app.post('/register', async (request, reply) => {
         try {
             // Validate the request body using Zod
@@ -95,5 +81,4 @@ export default async function userRoutes(app: FastifyInstance) {
             }
         }
     });
-
 }
