@@ -4,5 +4,6 @@ export function excludePasswordSelect() {
         name: true,
         email: true,
         role: true,
+        profilePicture: true,
     };
 }

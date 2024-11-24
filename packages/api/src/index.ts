@@ -1,8 +1,8 @@
 import Fastify from 'fastify';
-import { FastifyRequest, FastifyReply } from 'fastify';
+import fastifyStatic from '@fastify/static';
 import fastifyJWT from '@fastify/jwt';
-
-import { PrismaClient } from '@prisma/client';
+import multipart from '@fastify/multipart';
+import path from 'path';
 
 import userRoutes from './routes/user';
 import uploadRoutes from './routes/upload';
@@ -11,6 +11,9 @@ import adminRoutes from './routes/admin';
 import authRoutes from './routes/auth';
 
 const app = Fastify({ logger: true });
+
+// Register multipart plugin
+app.register(multipart);
 
 // Get the JWT secret key from the environment variables
 const jwtSecret = process.env.JWT_SECRET;
@@ -23,12 +26,19 @@ app.register(fastifyJWT, {
     secret: jwtSecret, // Cambia esto por una clave segura
 });
 
+// Serve static files
+app.register(fastifyStatic, {
+    root: path.join(__dirname, '../../uploads'),
+    prefix: '/uploads/', 
+});
+
 //Routes
 app.register(authRoutes, { prefix: '/auth' }); 
 app.register(userRoutes, { prefix: '/users' });
 app.register(uploadRoutes, { prefix: '/upload' });
 app.register(postRoutes, { prefix: '/posts' });
 app.register(adminRoutes, { prefix: '/admin' });
+
 
 app.listen({ port: 3000 }, (err) => {
     if (err) {

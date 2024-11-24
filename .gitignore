@@ -36,4 +36,7 @@ Thumbs.db
 # Otros
 coverage/
 
+# Upload files
+uploads/
+
 get-encripted-pass-bcrypt.ts

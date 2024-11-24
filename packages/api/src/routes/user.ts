@@ -1,9 +1,12 @@
-import { FastifyInstance } from 'fastify';
+import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { PrismaClient } from '@prisma/client';
 import { createUserSchema, updateUserSchema } from '../schemas/user.schema';
 import { z } from 'zod';
 import bcrypt from 'bcryptjs';
 import { excludePasswordSelect } from '../../../utils/user';
+import path from 'path';
+import fs from 'fs/promises';
+import mime from 'mime-types';
 
 const prisma = new PrismaClient();
 
@@ -93,6 +96,33 @@ export default async function userRoutes(app: FastifyInstance) {
                 // Handle other errors
                 reply.code(500).send({ error: 'Error creating user' });
             }
+        }
+    });
+
+    app.get('/:id/profile-picture', async (request: FastifyRequest, reply: FastifyReply) => {
+        const { id } = request.params as { id: string };
+    
+        try {
+            const user = await prisma.user.findUnique({
+                where: { id: parseInt(id) },
+                select: { profilePicture: true },
+            });
+    
+            if (!user || !user.profilePicture) {
+                reply.code(404).send({ error: 'User or profile picture not found' });
+                return;
+            }
+    
+            const filePath = path.join(__dirname, '../../', user.profilePicture);
+            const mimeType = mime.lookup(filePath) || 'application/octet-stream';
+    
+            await fs.access(filePath); // Check if file exists
+            const fileBuffer = await fs.readFile(filePath); // Read full file content
+    
+            reply.type(mimeType).send(fileBuffer); // Send full file data
+        } catch (err) {
+            console.error('Error retrieving profile picture:', err);
+            reply.code(500).send({ error: 'Failed to retrieve profile picture' });
         }
     });
 
