@@ -6,6 +6,8 @@ import axios from 'axios';
 const restServerUrl = 'http://localhost:3000'; // URL for REST login
 const wsServerUrl = 'ws://localhost:3000/ws'; // URL for WebSocket connection
 
+const isTestEnv = process.env.NODE_ENV === 'test';
+
 /**
  * Logs in to the server to obtain a JWT token.
  * @returns {Promise<string>} The JWT token received from the server.
@@ -30,7 +32,11 @@ export async function login(email: string, password: string): Promise<string> {
         } else {
             console.error('Unknown error during login');
         }
-        process.exit(1); // Exit if the token cannot be obtained
+        if (isTestEnv) {
+            throw new Error('Error the token cannot be obtained'); // Allow Jest to catch this
+        } else {
+            process.exit(1); // Only exit in non-test environments
+        }
     }
 }
 

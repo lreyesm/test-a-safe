@@ -1,6 +1,6 @@
 import { PrismaClient } from '@prisma/client';
-import bcrypt from 'bcryptjs';
 import { excludePasswordSelect } from '../utils/user';
+import { verifyPassword } from './password.service';
 
 const prisma = new PrismaClient();
 
@@ -12,7 +12,7 @@ const prisma = new PrismaClient();
  */
 export async function validateUserCredentials(email: string, password: string) {
     const user = await prisma.user.findUnique({ where: { email } });
-    if (user && (await bcrypt.compare(password, user.password))) {
+    if (user && (await verifyPassword(password, user.password))) {
         return user;
     }
     return null;

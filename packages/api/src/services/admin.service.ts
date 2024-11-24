@@ -3,7 +3,6 @@ import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { excludePasswordSelect } from '../utils/user';
 import { createUserSchema } from '../schemas/user.schema';
-import { z } from 'zod';
 
 const prisma = new PrismaClient();
 
@@ -15,15 +14,6 @@ const prisma = new PrismaClient();
  */
 export function validateUserData(data: { name: string; email: string; password: string; role?: string }) {
     return createUserSchema.parse(data);
-}
-
-/**
- * Hashes a plain-text password.
- * @param password - The plain-text password.
- * @returns A hashed password.
- */
-export async function hashPassword(password: string): Promise<string> {
-    return await bcrypt.hash(password, 10);
 }
 
 /**

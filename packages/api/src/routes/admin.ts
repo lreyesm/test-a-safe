@@ -1,13 +1,13 @@
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { 
     validateUserData,
-    hashPassword,
     createUserInDB,
     verifyAdminPrivileges,
     performAdminActionService,
     fetchAdminDashboardService,
 } from '../services/admin.service';
 import { handleHookError, handleServiceError } from '../services/error.service';
+import { hashPassword } from '../services/password.service';
 
 export default async function adminRoutes(app: FastifyInstance) {
     /**

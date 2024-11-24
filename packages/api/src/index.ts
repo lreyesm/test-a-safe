@@ -56,21 +56,39 @@ app.register(adminRoutes, { prefix: '/admin' }); // Admin-specific routes
 app.register(messageRoutes, { prefix: '/messages' }); // Messaging routes
 app.register(broadcastRoutes); // WebSocket broadcast routes
 
-// Example of periodic WebSocket notification
-setInterval(() => {
-    broadcastNotification('This is a periodic broadcast notification to all clients!');
-}, 30000); // Broadcasts every 30 seconds
-
 // Handle undefined routes with a 404 response
 app.all('*', (request, reply) => {
     reply.code(404).send({ error: 'Route not found' });
 });
 
+const isTestEnv = process.env.NODE_ENV === 'test';
+
 // Start the server and log errors if any
 app.listen({ port: 3000 }, (err) => {
     if (err) {
         app.log.error(err);
-        process.exit(1);
+        if (isTestEnv) {
+            throw new Error('Failed to start server'); // Allow Jest to catch this
+        } else {
+            process.exit(1); // Only exit in non-test environments
+        }
     }
     app.log.info('Server is running on http://localhost:3000');
 });
+
+// Ready function for testing
+export const ready = async () => {
+    if (!app.server.listening) {
+        await app.listen({ port: 3000 });
+    }
+    return app;
+};
+
+// Stop function for testing
+export const stop = async () => {
+    if (app.server.listening) {
+        await app.close();
+    }
+};
+
+export default app;
