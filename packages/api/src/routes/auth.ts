@@ -3,6 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import { createUserSchema } from '../schemas/user.schema';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
+import { excludePasswordSelect } from '../../../utils/user';
 
 const prisma = new PrismaClient();
 
@@ -44,6 +45,7 @@ export default async function authRoutes(app: FastifyInstance) {
             const updatedUser = await prisma.user.update({
                 where: { id: userId },
                 data: { name, email },
+                select: excludePasswordSelect(),
             });
 
             reply.send(updatedUser);

@@ -3,6 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import { createUserSchema, updateUserSchema } from '../schemas/user.schema';
 import { z } from 'zod';
 import bcrypt from 'bcryptjs';
+import { excludePasswordSelect } from '../../../utils/user';
 
 const prisma = new PrismaClient();
 
@@ -20,13 +21,7 @@ export default async function userRoutes(app: FastifyInstance) {
     // Get all users
     app.get('/', async () => {
         return await prisma.user.findMany({
-            select: {
-                id: true,
-                name: true,
-                email: true,
-                role: true,
-                // Exclude password
-            },
+            select: excludePasswordSelect(),
         });
     });
     
@@ -41,6 +36,7 @@ export default async function userRoutes(app: FastifyInstance) {
             const user = await prisma.user.update({
                 where: { id: parseInt(id) },
                 data,
+                select: excludePasswordSelect(),
             });
             reply.code(200).send(user);
         } catch (error) {
@@ -69,14 +65,14 @@ export default async function userRoutes(app: FastifyInstance) {
         try {
             // Validate the request body using Zod
             const validatedData = createUserSchema.parse(request.body);
-            
+
             // Destructure the validated data
             const { name, email } = validatedData;
             const { password, role } = request.body as { password: string; role?: string };
-            
+
             // Hash the password
             const hashedPassword = await bcrypt.hash(password, 10);
-            
+
             // Create the user in the database
             const user = await prisma.user.create({
                 data: {
@@ -85,8 +81,9 @@ export default async function userRoutes(app: FastifyInstance) {
                     password: hashedPassword, // Store the hashed password
                     role: role || 'user', // Default to 'user'
                 },
+                select: excludePasswordSelect(),
             });
-            
+
             reply.code(201).send({ message: 'User registered successfully', user });
         } catch (error) {
             if (error instanceof z.ZodError) {

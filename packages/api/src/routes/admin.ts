@@ -3,6 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import { createUserSchema } from '../schemas/user.schema';
 import { z } from 'zod';
 import bcrypt from 'bcryptjs';
+import { excludePasswordSelect } from '../../../utils/user';
 
 const prisma = new PrismaClient();
 
@@ -25,7 +26,7 @@ export default async function adminRoutes(app: FastifyInstance) {
     });
 
     // Ejemplo de ruta protegida para administradores
-    app.post('/admin-action', async (request: FastifyRequest, reply: FastifyReply) => {
+    app.post('/action', async (request: FastifyRequest, reply: FastifyReply) => {
         try {
             // Acción administrativa aquí
             reply.send({ message: 'Admin action successfully performed' });
@@ -35,7 +36,7 @@ export default async function adminRoutes(app: FastifyInstance) {
     });
 
     // Otra ruta de ejemplo para administradores
-    app.get('/admin-dashboard', async (request: FastifyRequest, reply: FastifyReply) => {
+    app.get('/dashboard', async (request: FastifyRequest, reply: FastifyReply) => {
         try {
             // Información administrativa aquí
             reply.send({ message: 'Welcome to the admin dashboard' });
@@ -66,6 +67,7 @@ export default async function adminRoutes(app: FastifyInstance) {
                     password: hashedPassword, // Store the hashed password
                     role: role || 'user', // Default to 'user'
                 },
+                select: excludePasswordSelect(),
             });
 
             reply.code(201).send({ message: 'User registered successfully', user });
