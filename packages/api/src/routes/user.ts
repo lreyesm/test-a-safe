@@ -7,6 +7,7 @@ import { excludePasswordSelect } from '../../../utils/user';
 import path from 'path';
 import fs from 'fs/promises';
 import mime from 'mime-types';
+import { notifyUser } from './broadcast';
 
 const prisma = new PrismaClient();
 
@@ -32,15 +33,19 @@ export default async function userRoutes(app: FastifyInstance) {
     app.put('/:id', async (request, reply) => {
         try {
             const { id } = request.params as { id: string };
-            
+    
             // Validate request body with Zod schema
             const data = updateUserSchema.parse(request.body);
-            
+    
             const user = await prisma.user.update({
                 where: { id: parseInt(id) },
                 data,
                 select: excludePasswordSelect(),
             });
+    
+            // Notify the updated user (if connected)
+            notifyUser(user.id.toString(), `User ${user.name}'s profile has been updated!`);
+    
             reply.code(200).send(user);
         } catch (error) {
             if (error instanceof z.ZodError) {

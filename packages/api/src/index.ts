@@ -4,13 +4,13 @@ import fastifyStatic from '@fastify/static';
 import fastifyJWT from '@fastify/jwt';
 import multipart from '@fastify/multipart';
 import path from 'path';
-import WebSocket from 'ws';
 
 import userRoutes from './routes/user';
 import uploadRoutes from './routes/upload';
 import postRoutes from './routes/post';
 import adminRoutes from './routes/admin';
 import authRoutes from './routes/auth';
+import messageRoutes from './routes/message';
 import { broadcastRoutes } from './routes/broadcast';
 
 import { ensureUploadDirExists} from '../../utils/upload';
@@ -48,12 +48,14 @@ app.register(userRoutes, { prefix: '/users' });
 app.register(uploadRoutes, { prefix: '/upload' });
 app.register(postRoutes, { prefix: '/posts' });
 app.register(adminRoutes, { prefix: '/admin' });
+app.register(messageRoutes, { prefix: '/messages' });
 app.register(broadcastRoutes);
+
 
 // Example usage of broadcastNotification (for testing purposes)
 setInterval(() => {
-    broadcastNotification('This is a broadcast notification to all clients!');
-}, 10000); // Broadcast a message every 10 seconds
+    broadcastNotification('This is a periodic broadcast notification to all clients!');
+}, 30000); // Broadcast a message every 10 seconds
 
 app.all('*', (request, reply) => {
     reply.code(404).send({ error: 'Route not found' });

@@ -2,6 +2,7 @@ import { FastifyInstance } from 'fastify';
 import { PrismaClient } from '@prisma/client';
 import { createPostSchema, updatePostSchema } from '../schemas/post.schema';
 import { z } from 'zod';
+import { broadcastNotification } from './broadcast';
 
 const prisma = new PrismaClient();
 
@@ -28,8 +29,15 @@ export default async function postRoutes(app: FastifyInstance) {
         try {
             // Validate request body with Zod schema
             const data = createPostSchema.parse(request.body);
-        
-            const post = await prisma.post.create({ data });
+    
+            const post = await prisma.post.create({
+                data,
+                include: { author: true }, // Include author details in response
+            });
+    
+            // Broadcast the new post notification
+            broadcastNotification(`New post created by ${post.author.name}: ${post.title}`);
+    
             reply.code(201).send(post);
         } catch (error) {
             if (error instanceof z.ZodError) {
