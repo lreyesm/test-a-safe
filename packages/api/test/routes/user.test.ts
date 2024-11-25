@@ -144,4 +144,33 @@ describe('User Routes', () => {
         expect(response.status).toBe(400);
         expect(response.body.error).toContain('Bad Request');
     });
+
+    /**
+     * Test: User found successfully.
+     */
+    it('should return user data when the user exists', async () => {
+        const email = 'admin@example.com';
+
+        const response = await request
+            .post('/users/data')
+            .send({ email })
+            .set('Authorization', `Bearer ${userToken}`);
+
+        expect(response.status).toBe(200);
+        expect(response.body.message).toBe('User found');
+        expect(response.body.user).toHaveProperty('email', email);
+    });
+
+    /**
+     * Test: User not found.
+     */
+    it('should return 204 when the user does not exist', async () => {
+        const response = await request
+            .post('/users/data')
+            .send({ email: 'nonexistent@example.com' })
+            .set('Authorization', `Bearer ${userToken}`);
+
+        expect(response.status).toBe(204);
+    });
+
 });

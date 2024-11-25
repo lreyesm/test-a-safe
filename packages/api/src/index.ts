@@ -9,9 +9,25 @@ import path from 'path';
 import { ensureUploadDirExists, maxFileSize } from './utils/upload';
 import { registerRoutes } from './utils/routes';
 import { setupSwagger } from './plugins/swagger';
+import { executeSQLFile } from './plugins/sqldata';
+
+// Path to the data.sql file
+const sqlFilePath = path.join(__dirname, '../../../prisma/data.sql');
+ // Execute the SQL file
+executeSQLFile(sqlFilePath);
 
 // Create the Fastify app instance with logging enabled
 const app = Fastify({ logger: process.env.NODE_ENV !== 'test' });
+
+// Port
+const port = parseInt(process.env.PORT || '3000', 10); 
+
+// Get the JWT secret from environment variables
+const jwtSecret = process.env.JWT_SECRET;
+if (!jwtSecret) {
+    throw new Error('JWT_SECRET is not defined in .env');
+}
+
 
 // Configura Swagger
 setupSwagger(app);
@@ -25,13 +41,6 @@ app.register(multipart, { limits: { fileSize: maxFileSize } });
 
 // Register WebSocket plugin for WebSocket communication
 app.register(fastifyWebsocket);
-
-// Get the JWT secret from environment variables
-const jwtSecret = process.env.JWT_SECRET;
-if (!jwtSecret) {
-    throw new Error('JWT_SECRET is not defined in .env');
-}
-
 // Register JWT plugin for authentication
 app.register(fastifyJWT, {
     secret: jwtSecret,
@@ -53,7 +62,7 @@ app.setNotFoundHandler((request, reply) => {
 const isTestEnv = process.env.NODE_ENV === 'test';
 
 // Start the server and log errors if any
-app.listen({ port: 3000 }, (err) => {
+app.listen({ port: port }, (err) => {
     if (err) {
         app.log.error(err);
         if (isTestEnv) {
@@ -62,13 +71,13 @@ app.listen({ port: 3000 }, (err) => {
             process.exit(1); // Only exit in non-test environments
         }
     }
-    app.log.info('Server is running on http://localhost:3000');
+    app.log.info(`Server is running on http://localhost:${port}`);
 });
 
 // Ready function for testing
 export const ready = async () => {
     if (!app.server.listening) {
-        await app.listen({ port: 3000 });
+        await app.listen({ port: port });
     }
     return app;
 };

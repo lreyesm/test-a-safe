@@ -193,3 +193,39 @@ export const getProfilePictureSchema = {
         },
     },
 };
+
+export const getUserSchema = {
+    description: 'Get data of user.',
+    tags: ['User'],
+    summary: 'Get user',
+    body: {
+        type: 'object',
+        required: ['email'],
+        properties: {
+            email: { type: 'string', format: 'email' }, // Ensure email is valid
+        },
+    },
+    response: {
+        200: {
+            description: 'User successfully found',
+            type: 'object',
+            properties: {
+                message: { type: 'string' },
+                user: {
+                    type: 'object',
+                    properties: {
+                        id: { type: 'number' },
+                        name: { type: 'string' },
+                        email: { type: 'string' },
+                        role: { type: 'string' },
+                        profilePicture: { type: ['string', 'null'] }, // Allow null values for profile picture
+                    },
+                },
+            },
+        },
+        204: {
+            description: 'User not found',
+            type: 'object',
+        }
+    },
+};
