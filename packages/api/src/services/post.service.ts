@@ -37,6 +37,7 @@ export async function createNewPost(requestBody: any) {
         broadcastNotification(`New post created by ${post.author.name}: ${post.title}`);
 
         return post;
+        
     } catch (error) {
         if (error instanceof z.ZodError) {
             throw new Error(`Validation Error: ${JSON.stringify(error.errors)}`);
@@ -69,13 +70,24 @@ export async function updatePost(postId: number, requestBody: any) {
 
 /**
  * Deletes a post by its ID.
- * @param postId The ID of the post to delete.
- * @throws Error if the post cannot be deleted.
+ * 
+ * This function interacts with the database to delete a post. If the post does not exist,
+ * it throws an error.
+ * 
+ * @param { number } postId - The ID of the post to be deleted.
+ * @throws { Error } - If the post does not exist or deletion fails.
  */
-export async function deletePost(postId: number) {
+export async function deletePostById(postId: number) {
     try {
-        await prisma.post.delete({ where: { id: postId } });
-    } catch (error) {
-        throw new Error('Failed to delete post');
+        const deletedPost = await prisma.post.delete({  where: { id: postId } });
+
+        if (!deletedPost) throw new Error('Post not found'); // Throw an error if the post doesn't exist
+        
+    } catch (error: any) {
+        if (error.code === 'P2025') {
+            // Prisma-specific error code for "Record to delete does not exist"
+            throw new Error('Post not found');
+        }
+        throw new Error('Failed to delete post'); // Generic error for other issues
     }
 }

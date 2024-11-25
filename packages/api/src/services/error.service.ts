@@ -58,6 +58,5 @@ export function handleWebSocketError(connection: WebSocket, err: unknown, defaul
  */
 export function handleHttpError(reply: FastifyReply, error: unknown, defaultMessage: string = 'Internal Server Error') {
     const err = error instanceof Error ? error : new Error(defaultMessage);
-    console.error(err.message); // Log the error for debugging
     reply.code(500).send({ error: err.message });
 }

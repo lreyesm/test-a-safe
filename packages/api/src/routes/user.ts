@@ -5,8 +5,11 @@ import {
     updateUser,
     deleteUser,
     getProfilePicture,
+    validateUserData,
+    createUserInDB,
 } from '../services/user.service';
-import { handleHttpError } from '../services/error.service';
+import { handleHookError, handleHttpError, handleServiceError } from '../services/error.service';
+import { hashPassword } from '../services/password.service';
 
 /**
  * User-related HTTP routes for Fastify.
@@ -21,10 +24,13 @@ export default async function userRoutes(app: FastifyInstance) {
      * Verifies the JWT token for all user routes.
      */
     app.addHook('preHandler', async (request, reply) => {
-        try {
-            await request.jwtVerify();
-        } catch (err) {
-            reply.code(401).send({ error: 'Unauthorized' });
+        const unprotectedRoutes = ['/users/register'];
+        if (!unprotectedRoutes.includes(request.routerPath)) {
+            try {
+                await request.jwtVerify();
+            } catch (err) {
+                handleHookError(err, reply, 'Unauthorized');
+            }
         }
     });
 
@@ -95,6 +101,31 @@ export default async function userRoutes(app: FastifyInstance) {
             reply.type(mimeType).send(fileBuffer);
         } catch (error) {
             handleHttpError(reply, error, 'Failed to retrieve profile picture');
+        }
+    });
+
+    
+
+    /**
+     * Register a new user.
+     * @route POST /admin/register
+     * @param body - The user data including name, email, password, and role.
+     * @returns A success message and the created user object.
+     */
+    app.post('/register', async (request: FastifyRequest, reply: FastifyReply) => {
+        try {
+            // Validate user data
+            const { name, email, password, role } = validateUserData(request.body as any);
+
+            // Hash the password
+            const hashedPassword = await hashPassword(password);
+
+            // Create the user in the database
+            const user = await createUserInDB({ name, email, hashedPassword, role: role || 'user' });
+
+            reply.code(201).send({ message: 'User registered successfully', user });
+        } catch (error) {
+            handleServiceError(error, reply, 'Error creating user');
         }
     });
 }

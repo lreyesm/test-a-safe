@@ -2,6 +2,10 @@ import fs from 'fs/promises';
 import path from 'path';
 import { randomUUID } from 'crypto';
 import { PrismaClient } from '@prisma/client';
+import sharp from 'sharp';
+import { maxFileSize, maxImageSize } from '../utils/upload';
+import { FastifyReply } from 'fastify';
+import { error } from 'console';
 
 const prisma = new PrismaClient();
 
@@ -16,9 +20,9 @@ const prisma = new PrismaClient();
  * @returns The URL of the uploaded profile picture.
  * @throws Error if the upload process fails.
  */
-export async function handleProfilePictureUpload(file: any, userId: number) {
+export async function handleProfilePictureUpload(file: any, userId: number, reply: FastifyReply) {
     // Validate the file
-    validateFile(file);
+    if(!await validateFile(file, reply)) return '';
     
     // Generate paths for the uploaded file
     const { uploadPath, fileUrl, userDirectory } = generateFilePaths(userId, file.filename);
@@ -34,20 +38,25 @@ export async function handleProfilePictureUpload(file: any, userId: number) {
 
 /**
  * Validates the uploaded file's type and size.
- * @param file The uploaded file object.
+ * @param fileData The uploaded file object.
  * @throws Error if the file type or size is invalid.
  */
-export function validateFile(file: any) {
+export async function validateFile(fileData: any, reply: FastifyReply) {
     const validTypes = ['image/jpeg', 'image/png'];
-    const maxFileSize = 5 * 1024 * 1024; // 5MB
 
-    if (!validTypes.includes(file.mimetype)) {
-        throw new Error('Invalid file type. Only JPG and PNG are allowed.');
+    if (!validTypes.includes(fileData.mimetype)) {
+        reply.code(400).send({ error: 'Invalid file type. Only JPG and PNG are allowed.' });
+        return false;
     }
 
-    if (file.file.bytesRead > maxFileSize) {
-        throw new Error('File size exceeds the 5MB limit.');
+    const buffer = await fileData.toBuffer();
+    const imageMetadata = await sharp(buffer).metadata();
+
+    if (imageMetadata && imageMetadata.size! > maxImageSize) {
+        reply.code(400).send({ error: 'File size exceeds the 5MB limit.' });
+        return false;
     }
+    return true;
 }
 
 /**

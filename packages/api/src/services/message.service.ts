@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { notifyUser } from './broadcast.service';
+import { FastifyReply } from 'fastify';
 
 const prisma = new PrismaClient();
 
@@ -24,6 +25,26 @@ export async function sendMessage(senderId: number, receiverId: number, content:
     } catch (error) {
         throw new Error('Failed to send message');
     }
+}
+
+/**
+ * Validates the input for sending a message.
+ * 
+ * @param content The content of the message.
+ * @param receiverId The ID of the message recipient.
+ * @param reply The FastifyReply object to send responses in case of validation failure.
+ * @returns A boolean indicating if the input is valid.
+ */
+export function validateMessageInput(content: string | undefined, receiverId: number | undefined, reply: FastifyReply): boolean {
+    if (!content || content.trim() === '') {
+        reply.code(400).send({ error: 'Message content is required' });
+        return false;
+    }
+    if (!receiverId || isNaN(Number(receiverId)) || Number(receiverId) <= 0) {
+        reply.code(400).send({ error: 'Valid receiverId is required' });
+        return false;
+    }
+    return true;
 }
 
 /**

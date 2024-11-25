@@ -4,6 +4,7 @@ import path from 'path';
 import fs from 'fs/promises';
 import mime from 'mime-types';
 import { excludePasswordSelect } from '../utils/user';
+import { createUserSchema } from '../schemas/user.schema';
 
 const prisma = new PrismaClient();
 
@@ -48,9 +49,15 @@ export async function updateUser(userId: number, data: any) {
  */
 export async function deleteUser(userId: number) {
     try {
-        await prisma.user.delete({ where: { id: userId } });
-    } catch (error) {
-        throw new Error('Failed to delete user');
+        const deletedUser = await prisma.user.delete({ where: { id: userId } });
+        if (!deletedUser) throw new Error('User not found'); // Throw an error if the post doesn't exist
+        
+    } catch (error: any) {
+        if (error.code === 'P2025') {
+            // Prisma-specific error code for "Record to delete does not exist"
+            throw new Error('User not found');
+        }
+        throw new Error('Failed to delete user'); // Generic error for other issues
     }
 }
 
@@ -108,4 +115,36 @@ export async function getProfilePicture(userId: number) {
     const filePath = await getUserProfilePicturePath(userId);
     await validateFileExists(filePath);
     return readFileBuffer(filePath);
+}
+
+/**
+ * Validates user input for registration.
+ * @param data - The user data to validate.
+ * @returns Validated user data.
+ * @throws z.ZodError if validation fails.
+ */
+export function validateUserData(data: { name: string; email: string; password: string; role?: string }) {
+    return createUserSchema.parse(data);
+}
+
+/**
+ * Creates a new user in the database.
+ * @param data - The user data, including hashed password.
+ * @returns The created user object without the password.
+ * @throws Error for database-related issues.
+ */
+export async function createUserInDB(data: { name: string; email: string; hashedPassword: string; role: string }) {
+    try {
+        return await prisma.user.create({
+            data: {
+                name: data.name,
+                email: data.email,
+                password: data.hashedPassword,
+                role: data.role,
+            },
+            select: excludePasswordSelect(),
+        });
+    } catch (error) {
+        throw new Error('Database Error: Failed to create user');
+    }
 }

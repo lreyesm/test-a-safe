@@ -1,6 +1,9 @@
 import fs from 'fs';
 import path from 'path';
 
+export const maxFileSize = 6 * 1024 * 1024;
+export const maxImageSize = 5 * 1024 * 1024;
+
 /**
  * Ensures the existence of the uploads directory.
  * 

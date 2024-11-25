@@ -14,8 +14,11 @@ const clients = new Map<string, WebSocket>();
  */
 export function handleWebSocketConnection(app: FastifyInstance, connection: WebSocket, req: any) {
     try {
+        // Ensure req.url is valid
+        if (!req.url) throw new Error('Invalid WebSocket request URL');
+
         // Extract token and validate
-        const url = new URL(req.url || '', `http://${req.headers.host}`);
+        const url = new URL(req.url, `http://${req.headers.host}`);
         const token = url.searchParams.get('token');
         const userId = validateWebSocketToken(app, token!);
 
@@ -99,7 +102,6 @@ export function validateWebSocketToken(app: FastifyInstance, token: string): str
  */
 export function registerWebSocket(userId: string, socket: WebSocket) {
     clients.set(userId, socket);
-    console.log(`User connected: ${userId}`);
 }
 
 /**
@@ -108,5 +110,4 @@ export function registerWebSocket(userId: string, socket: WebSocket) {
  */
 export function removeWebSocket(userId: string) {
     clients.delete(userId);
-    console.log(`User disconnected: ${userId}`);
 }

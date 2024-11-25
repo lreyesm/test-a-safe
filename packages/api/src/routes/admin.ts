@@ -1,7 +1,5 @@
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { 
-    validateUserData,
-    createUserInDB,
     verifyAdminPrivileges,
     performAdminActionService,
     fetchAdminDashboardService,
@@ -52,29 +50,6 @@ export default async function adminRoutes(app: FastifyInstance) {
             reply.send(result);
         } catch (error) {
             handleServiceError(error, reply, 'Failed to load admin dashboard');
-        }
-    });
-
-    /**
-     * Register a new user.
-     * @route POST /admin/register
-     * @param body - The user data including name, email, password, and role.
-     * @returns A success message and the created user object.
-     */
-    app.post('/register', async (request: FastifyRequest, reply: FastifyReply) => {
-        try {
-            // Validate user data
-            const { name, email, password, role } = validateUserData(request.body as any);
-
-            // Hash the password
-            const hashedPassword = await hashPassword(password);
-
-            // Create the user in the database
-            const user = await createUserInDB({ name, email, hashedPassword, role: role || 'user' });
-
-            reply.code(201).send({ message: 'User registered successfully', user });
-        } catch (error) {
-            handleServiceError(error, reply, 'Error creating user');
         }
     });
 }

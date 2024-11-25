@@ -1,5 +1,5 @@
 import Fastify from 'fastify';
-import fastifyWebsocket, { SocketStream } from '@fastify/websocket';
+import fastifyWebsocket from '@fastify/websocket';
 import fastifyStatic from '@fastify/static';
 import fastifyJWT from '@fastify/jwt';
 import multipart from '@fastify/multipart';
@@ -15,17 +15,17 @@ import messageRoutes from './routes/message';
 import { broadcastRoutes } from './routes/broadcast';
 
 // Utility and service imports
-import { ensureUploadDirExists } from './utils/upload';
-import { broadcastNotification } from './services/broadcast.service';
+import { ensureUploadDirExists, maxFileSize } from './utils/upload';
 
 // Create the Fastify app instance with logging enabled
-const app = Fastify({ logger: true });
+const app = Fastify({ logger: process.env.NODE_ENV !== 'test' });
 
 // Ensure the upload directory exists
 ensureUploadDirExists();
 
 // Register multipart plugin for handling file uploads
-app.register(multipart);
+app.register(multipart, { limits: { fileSize: maxFileSize } });
+
 
 // Register WebSocket plugin for WebSocket communication
 app.register(fastifyWebsocket);
@@ -56,10 +56,10 @@ app.register(adminRoutes, { prefix: '/admin' }); // Admin-specific routes
 app.register(messageRoutes, { prefix: '/messages' }); // Messaging routes
 app.register(broadcastRoutes); // WebSocket broadcast routes
 
-// Handle undefined routes with a 404 response
-app.all('*', (request, reply) => {
+// Custom 404 handler
+app.setNotFoundHandler((request, reply) => {
     reply.code(404).send({ error: 'Route not found' });
-});
+})
 
 const isTestEnv = process.env.NODE_ENV === 'test';
 

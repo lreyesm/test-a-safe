@@ -1,5 +1,5 @@
 import { FastifyInstance } from 'fastify';
-import { getAllPosts, createNewPost, updatePost, deletePost } from '../services/post.service';
+import { getAllPosts, createNewPost, updatePost, deletePostById } from '../services/post.service';
 import { handleHttpError } from '../services/error.service';
 
 /**
@@ -11,7 +11,7 @@ import { handleHttpError } from '../services/error.service';
  * @param app - The Fastify instance.
  */
 export default async function postRoutes(app: FastifyInstance) {
-    
+
     /**
      * Middleware to verify the JWT token for authentication.
      * 
@@ -74,6 +74,8 @@ export default async function postRoutes(app: FastifyInstance) {
         const { id } = request.params as { id: string };
 
         try {
+            if(!(request.body as any).title) return reply.code(400).send({ error: 'title is required' });
+            
             const post = await updatePost(parseInt(id), request.body);
             reply.code(200).send(post);
         } catch (error) {
@@ -94,7 +96,7 @@ export default async function postRoutes(app: FastifyInstance) {
         const { id } = request.params as { id: string };
 
         try {
-            await deletePost(parseInt(id));
+            await deletePostById(parseInt(id));
             reply.code(204).send(); // Send a "No Content" response
         } catch (error) {
             handleHttpError(reply, error, 'Failed to delete post');

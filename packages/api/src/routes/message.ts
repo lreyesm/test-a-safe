@@ -1,5 +1,5 @@
 import { FastifyInstance } from 'fastify';
-import { sendMessage, getMessagesBetweenUsers } from '../services/message.service';
+import { sendMessage, getMessagesBetweenUsers, validateMessageInput } from '../services/message.service';
 import { handleHttpError } from '../services/error.service';
 
 /**
@@ -38,6 +38,9 @@ export default async function messageRoutes(app: FastifyInstance) {
         const { content, receiverId } = request.body as { content: string; receiverId: number };
         const senderId = (request.user as any).id; // Retrieve the sender's ID from the authenticated user
 
+        // Validate input
+        if (!validateMessageInput(content, receiverId, reply)) return; // Exit early if validation fails
+        
         try {
             const message = await sendMessage(senderId, receiverId, content); // Delegate to the service
             reply.code(201).send({ status: 'Message sent', message }); // Send a success response
@@ -60,6 +63,9 @@ export default async function messageRoutes(app: FastifyInstance) {
         const { userId } = request.params as { userId: string };
         const currentUserId = (request.user as any).id; // Retrieve the current user's ID from the authenticated user
 
+        // Validate userId
+        if (isNaN(Number(userId)) || Number(userId) <= 0) return reply.code(400).send({ error: 'Invalid user ID' });
+        
         try {
             const messages = await getMessagesBetweenUsers(currentUserId, parseInt(userId)); // Delegate to the service
             reply.code(200).send(messages); // Send the list of messages as the response

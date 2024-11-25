@@ -32,14 +32,15 @@ export default async function uploadRoutes(app: FastifyInstance) {
      * @body { file } - The uploaded file.
      * @response { message: string, url: string } - Confirmation of the upload and the file's public URL.
      */
-    app.post('/profile-picture', async (req: any, reply) => {
+    app.post('/profile-picture', async (req: FastifyRequest, reply: FastifyReply) => {
         const file = await req.file();
         const user = req.user as { id: number }; 
 
         if (!file) return reply.code(400).send({ error: 'No file uploaded' });
 
         try {
-            const fileUrl = await handleProfilePictureUpload(file, user.id);
+            const fileUrl = await handleProfilePictureUpload(file, user.id, reply);
+            if(!fileUrl) return;
 
             const message = 'Profile picture uploaded successfully';
             reply.code(200).send({ message: message, url: fileUrl });

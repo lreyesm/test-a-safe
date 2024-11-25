@@ -72,7 +72,7 @@ export default async function authRoutes(app: FastifyInstance) {
     app.get('/protected', async (request: FastifyRequest, reply: FastifyReply) => {
         try {
             const user = request.user as { id: number; email: string; role: string };
-            reply.send({ message: `Hello, ${user.email}` });
+            reply.send({ id: user.id, message: `Hello, ${user.email}` });
         } catch (err) {
             handleHookError(err, reply, 'Failed to access protected route');
         }
