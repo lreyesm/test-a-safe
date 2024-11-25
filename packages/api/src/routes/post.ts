@@ -1,84 +1,106 @@
 import { FastifyInstance } from 'fastify';
-import { PrismaClient } from '@prisma/client';
-import { createPostSchema, updatePostSchema } from '../schemas/post.schema';
-import { z } from 'zod';
-import { broadcastNotification } from './broadcast';
+import { getAllPosts, createNewPost, updatePost, deletePostById } from '../services/post.service';
+import { handleHttpError } from '../services/error.service';
+import { createPostSwaggerSchema, deletePostSchema, getAllPostsSchema, updatePostSwaggerSchema } from '../schemas/post.schema';
 
-const prisma = new PrismaClient();
-
+/**
+ * Post-related HTTP routes for Fastify.
+ * 
+ * This module defines routes for creating, updating, deleting, and retrieving posts.
+ * The logic is delegated to services for reusability and separation of concerns.
+ * 
+ * @param app - The Fastify instance.
+ */
 export default async function postRoutes(app: FastifyInstance) {
-        
-    // Middleware global para proteger todas las rutas
+
+    /**
+     * Middleware to verify the JWT token for authentication.
+     * 
+     * This hook ensures that all routes in this module are protected.
+     */
     app.addHook('preHandler', async (request, reply) => {
         try {
-            await request.jwtVerify(); // Verifica el token
+            await request.jwtVerify(); // Verify the token
         } catch (err) {
             reply.code(401).send({ error: 'Unauthorized' });
         }
     });
-    
-    // Get all posts
-    app.get('/', async () => {
-        return await prisma.post.findMany({
-            include: { author: true }, // Include related user data
-        });
-    });
-    
-    // Create a new post
-    app.post('/', async (request, reply) => {
+
+    /**
+     * Route to fetch all posts.
+     * 
+     * This endpoint retrieves all posts along with their associated author details.
+     * 
+     * @route GET /posts
+     * @response { object[] } - The list of posts.
+     */
+    app.get('/', { schema: getAllPostsSchema }, async (_request, reply) => {
         try {
-            // Validate request body with Zod schema
-            const data = createPostSchema.parse(request.body);
-    
-            const post = await prisma.post.create({
-                data,
-                include: { author: true }, // Include author details in response
-            });
-    
-            // Broadcast the new post notification
-            broadcastNotification(`New post created by ${post.author.name}: ${post.title}`);
-    
+            const posts = await getAllPosts();
+            reply.code(200).send(posts);
+        } catch (error) {
+            handleHttpError(reply, error, 'Failed to retrieve posts');
+        }
+    });
+
+    /**
+     * Route to create a new post.
+     * 
+     * This endpoint allows authenticated users to create a new post. 
+     * A notification is broadcasted when a post is created.
+     * 
+     * @route POST /posts
+     * @body { title: string, content: string, authorId: number } - The post data.
+     * @response { object } - The created post.
+     */
+    app.post('/', { schema: createPostSwaggerSchema }, async (request, reply) => {
+        try {
+            const post = await createNewPost(request.body);
             reply.code(201).send(post);
         } catch (error) {
-            if (error instanceof z.ZodError) {
-                reply.code(400).send({ error: error.errors });
-            } else {
-                reply.code(400).send({ error: 'Invalid data' });
-            }
+            handleHttpError(reply, error, 'Failed to create post');
         }
     });
-    
-    // Update a post
-    app.put('/:id', async (request, reply) => {
+
+    /**
+     * Route to update an existing post.
+     * 
+     * This endpoint allows users to update the content of an existing post by its ID.
+     * 
+     * @route PUT /posts/:id
+     * @param { string } id - The ID of the post to update.
+     * @response { object } - The updated post.
+     */
+    app.put('/:id', { schema: updatePostSwaggerSchema }, async (request, reply) => {
+        const { id } = request.params as { id: string };
+
         try {
-            const { id } = request.params as { id: string };
+            if(!(request.body as any).title) return reply.code(400).send({ error: 'title is required' });
             
-            // Validate request body with Zod schema
-            const data = updatePostSchema.parse(request.body);
-            
-            const post = await prisma.post.update({
-                where: { id: parseInt(id) },
-                data,
-            });
+            const post = await updatePost(parseInt(id), request.body);
             reply.code(200).send(post);
         } catch (error) {
-            if (error instanceof z.ZodError) {
-                reply.code(400).send({ error: error.errors });
-            } else {
-                reply.code(400).send({ error: 'Invalid data' });
-            }
+            handleHttpError(reply, error, 'Failed to update post');
         }
     });
-    
-    // Delete a post
-    app.delete('/:id', async (request, reply) => {
+
+    /**
+     * Route to delete a post by its ID.
+     * 
+     * This endpoint allows users to delete a post by providing its ID.
+     * 
+     * @route DELETE /posts/:id
+     * @param { string } id - The ID of the post to delete.
+     * @response { void }
+     */
+    app.delete('/:id', { schema: deletePostSchema }, async (request, reply) => {
+        const { id } = request.params as { id: string };
+
         try {
-            const { id } = request.params as { id: string };
-            
-            await prisma.post.delete({ where: { id: parseInt(id) } });
-            reply.code(204).send();
+            await deletePostById(parseInt(id));
+            reply.code(204).send(); // Send a "No Content" response
         } catch (error) {
-            reply.code(404).send({ error: 'Post not found' });
+            handleHttpError(reply, error, 'Failed to delete post');
         }
     });
 }

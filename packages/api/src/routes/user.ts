@@ -1,134 +1,130 @@
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import { PrismaClient } from '@prisma/client';
-import { createUserSchema, updateUserSchema } from '../schemas/user.schema';
-import { z } from 'zod';
-import bcrypt from 'bcryptjs';
-import { excludePasswordSelect } from '../../../utils/user';
-import path from 'path';
-import fs from 'fs/promises';
-import mime from 'mime-types';
-import { notifyUser } from './broadcast';
+import { notifyUser } from '../services/broadcast.service';
+import {
+    getAllUsers,
+    updateUser,
+    deleteUser,
+    getProfilePicture,
+    validateUserData,
+    createUserInDB,
+} from '../services/user.service';
+import { handleHookError, handleHttpError, handleServiceError } from '../services/error.service';
+import { hashPassword } from '../services/password.service';
+import { deleteUserSchema, getAllUsersSchema, getProfilePictureSchema, registerUserSchema, updateUserSchema, updateUserSwaggerSchema } from '../schemas/user.schema';
 
-const prisma = new PrismaClient();
-
+/**
+ * User-related HTTP routes for Fastify.
+ * 
+ * This module defines routes for user management, such as fetching, updating, and deleting users.
+ * 
+ * @param app - The Fastify instance.
+ */
 export default async function userRoutes(app: FastifyInstance) {
-    
-    // Middleware global para proteger todas las rutas
+    /**
+     * Middleware for authentication.
+     * Verifies the JWT token for all user routes.
+     */
     app.addHook('preHandler', async (request, reply) => {
-        try {
-            await request.jwtVerify(); // Verifica el token
-        } catch (err) {
-            reply.code(401).send({ error: 'Unauthorized' });
-        }
-    });
-
-    // Get all users
-    app.get('/', async () => {
-        return await prisma.user.findMany({
-            select: excludePasswordSelect(),
-        });
-    });
-    
-    // Update a user
-    app.put('/:id', async (request, reply) => {
-        try {
-            const { id } = request.params as { id: string };
-    
-            // Validate request body with Zod schema
-            const data = updateUserSchema.parse(request.body);
-    
-            const user = await prisma.user.update({
-                where: { id: parseInt(id) },
-                data,
-                select: excludePasswordSelect(),
-            });
-    
-            // Notify the updated user (if connected)
-            notifyUser(user.id.toString(), `User ${user.name}'s profile has been updated!`);
-    
-            reply.code(200).send(user);
-        } catch (error) {
-            if (error instanceof z.ZodError) {
-                reply.code(400).send({ error: error.errors });
-            } else {
-                reply.code(400).send({ error: 'Invalid data' });
+        const unprotectedRoutes = ['/users/register'];
+        if (!request.routeOptions.url || !unprotectedRoutes.includes(request.routerPath)) {
+            try {
+                await request.jwtVerify();
+            } catch (err) {
+                handleHookError(err, reply, 'Unauthorized');
             }
         }
     });
-    
-    // Delete a user
-    app.delete('/:id', async (request, reply) => {
+
+    /**
+     * Route to fetch all users.
+     * 
+     * @route GET /users
+     * @response { object[] } - The list of users.
+     */
+    app.get('/', { schema: getAllUsersSchema }, async (_request, reply) => {
         try {
-            const { id } = request.params as { id: string };
-            
-            await prisma.user.delete({ where: { id: parseInt(id) } });
-            reply.code(204).send();
+            const users = await getAllUsers();
+            reply.code(200).send(users);
         } catch (error) {
-            reply.code(404).send({ error: 'User not found' });
+            handleHttpError(reply, error, 'Failed to retrieve users');
         }
     });
 
-    // Create a new user
-    app.post('/register', async (request, reply) => {
-        try {
-            // Validate the request body using Zod
-            const validatedData = createUserSchema.parse(request.body);
+    /**
+     * Route to update a user's details.
+     * 
+     * @route PUT /users/:id
+     * @param { string } id - The ID of the user to update.
+     * @response { object } - The updated user.
+     */
+    app.put('/:id', { schema: updateUserSwaggerSchema }, async (request, reply) => {
+        const { id } = request.params as { id: string };
 
-            // Destructure the validated data
-            const { name, email } = validatedData;
-            const { password, role } = request.body as { password: string; role?: string };
+        try {
+            const updatedUser = await updateUser(parseInt(id), request.body);
+            notifyUser(updatedUser.id.toString(), `User ${updatedUser.name}'s profile has been updated!`);
+            reply.code(200).send(updatedUser);
+        } catch (error) {
+            handleHttpError(reply, error, 'Failed to update user');
+        }
+    });
+
+    /**
+     * Route to delete a user.
+     * 
+     * @route DELETE /users/:id
+     * @param { string } id - The ID of the user to delete.
+     * @response { void }
+     */
+    app.delete('/:id', { schema: deleteUserSchema }, async (request, reply) => {
+        const { id } = request.params as { id: string };
+
+        try {
+            await deleteUser(parseInt(id));
+            reply.code(204).send();
+        } catch (error) {
+            handleHttpError(reply, error, 'Failed to delete user');
+        }
+    });
+
+    /**
+     * Route to fetch a user's profile picture.
+     * 
+     * @route GET /users/:id/profile-picture
+     * @param { string } id - The ID of the user.
+     * @response { file } - The profile picture file.
+     */
+    app.get('/:id/profile-picture', { schema: getProfilePictureSchema }, async (request, reply) => {
+        const { id } = request.params as { id: string };
+
+        try {
+            const { fileBuffer, mimeType } = await getProfilePicture(parseInt(id));
+            reply.type(mimeType).send(fileBuffer);
+        } catch (error) {
+            handleHttpError(reply, error, 'Failed to retrieve profile picture');
+        }
+    });
+
+    /**
+     * Register a new user.
+     * @route POST /admin/register
+     * @param body - The user data including name, email, password, and role.
+     * @returns A success message and the created user object.
+     */
+    app.post('/register', { schema: registerUserSchema }, async (request: FastifyRequest, reply: FastifyReply) => {
+        try {
+            // Validate user data
+            const { name, email, password, role } = validateUserData(request.body as any);
 
             // Hash the password
-            const hashedPassword = await bcrypt.hash(password, 10);
+            const hashedPassword = await hashPassword(password);
 
             // Create the user in the database
-            const user = await prisma.user.create({
-                data: {
-                    name,
-                    email,
-                    password: hashedPassword, // Store the hashed password
-                    role: role || 'user', // Default to 'user'
-                },
-                select: excludePasswordSelect(),
-            });
+            const user = await createUserInDB({ name, email, hashedPassword, role: role || 'user' });
 
             reply.code(201).send({ message: 'User registered successfully', user });
         } catch (error) {
-            if (error instanceof z.ZodError) {
-                // Handle validation errors
-                reply.code(400).send({ error: error.errors });
-            } else {
-                // Handle other errors
-                reply.code(500).send({ error: 'Error creating user' });
-            }
+            handleServiceError(error, reply, 'Error creating user');
         }
     });
-
-    app.get('/:id/profile-picture', async (request: FastifyRequest, reply: FastifyReply) => {
-        const { id } = request.params as { id: string };
-    
-        try {
-            const user = await prisma.user.findUnique({
-                where: { id: parseInt(id) },
-                select: { profilePicture: true },
-            });
-    
-            if (!user || !user.profilePicture) {
-                reply.code(404).send({ error: 'User or profile picture not found' });
-                return;
-            }
-    
-            const filePath = path.join(__dirname, '../../', user.profilePicture);
-            const mimeType = mime.lookup(filePath) || 'application/octet-stream';
-    
-            await fs.access(filePath); // Check if file exists
-            const fileBuffer = await fs.readFile(filePath); // Read full file content
-    
-            reply.type(mimeType).send(fileBuffer); // Send full file data
-        } catch (err) {
-            console.error('Error retrieving profile picture:', err);
-            reply.code(500).send({ error: 'Failed to retrieve profile picture' });
-        }
-    });
-
 }

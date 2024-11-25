@@ -8,15 +8,15 @@ datasource db {
 }
 
 model User {
-  id              Int       @id @default(autoincrement())
-  email           String    @unique
-  name            String
-  password        String  
-  role            String    @default("user")
-  profilePicture  String?
-  posts           Post[]
-  sentMessages    Message[] @relation("SentMessages")
-  receivedMessages Message[] @relation("ReceivedMessages")
+  id                Int       @id @default(autoincrement())
+  email             String    @unique
+  name              String
+  password          String  
+  role              String    @default("user")
+  profilePicture    String?
+  posts             Post[]
+  sentMessages      Message[] @relation("SentMessages")
+  receivedMessages  Message[] @relation("ReceivedMessages")
 }
 
 model Post {

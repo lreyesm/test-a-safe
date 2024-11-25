@@ -10,6 +10,6 @@
     "resolveJsonModule": true,
     "typeRoots": ["./node_modules/@types", "./packages/api/src/types"]
   },
-  "include": ["packages/**/*.ts"],
+  "include": ["packages/**/*.ts", "packages/api/test/services"],
   "exclude": ["node_modules", "dist"]
 }

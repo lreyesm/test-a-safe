@@ -1,61 +1,82 @@
-import { FastifyInstance } from 'fastify';
-import { PrismaClient } from '@prisma/client';
-import { createUserSchema } from '../schemas/user.schema';
-import bcrypt from 'bcryptjs';
-import { z } from 'zod';
-import { excludePasswordSelect } from '../../../utils/user';
-
-const prisma = new PrismaClient();
+import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
+import { handleHookError } from '../services/error.service';
+import {
+    validateUserCredentials,
+    generateJWT,
+    updateUserProfile,
+} from '../services/auth.service';
+import { loginSchema, protectedRouteSchema, updateProfileSchema } from '../schemas/auth.schema';
 
 export default async function authRoutes(app: FastifyInstance) {
-    
-    // Middleware global para proteger rutas excepto login y register
+    /**
+     * Middleware to protect routes except login.
+     */
     app.addHook('preHandler', async (request, reply) => {
         const unprotectedRoutes = ['/auth/login'];
-        if (!unprotectedRoutes.includes(request.routerPath)) {
+        if (!request.routeOptions.url || !unprotectedRoutes.includes(request.routeOptions.url)) {
             try {
                 await request.jwtVerify();
             } catch (err) {
-                reply.code(401).send({ error: 'Unauthorized' });
+                handleHookError(err, reply, 'Unauthorized');
             }
         }
     });
 
-    // Login route
-    app.post('/login', async (request, reply) => {
-        const { email, password } = request.body as { email: string; password: string };
-
-        const user = await prisma.user.findUnique({ where: { email } });
-
-        if (!user || !(await bcrypt.compare(password, user.password))) {
-            reply.code(401).send({ error: 'Invalid email or password' });
-            return;
-        }
-
-        // Generate JWT
-        const token = app.jwt.sign({ id: user.id, email: user.email, role: user.role });
-        reply.send({ message: 'Login successful', token });
-    });
-
-    app.put('/profile', async (request, reply) => {
-        const { name, email } = request.body as { name: string; email: string };
-        const userId = (request.user as { id: number }).id;
-
+    /**
+     * Login route for users.
+     * @route POST /auth/login
+     * @body email - The user's email.
+     * @body password - The user's password.
+     * @returns A JWT token if authentication is successful.
+     */
+    app.post('/login', { schema: loginSchema }, async (request: FastifyRequest, reply: FastifyReply) => {
         try {
-            const updatedUser = await prisma.user.update({
-                where: { id: userId },
-                data: { name, email },
-                select: excludePasswordSelect(),
-            });
+            const { email, password } = request.body as { email: string; password: string };
+            if(!email || !password) return reply.code(400).send({ error: 'Email and password are required' });
+            
+            // Validate user credentials
+            const user = await validateUserCredentials(email, password);
+            if (!user) return reply.code(401).send({ error: 'Invalid email or password' });
 
-            reply.send(updatedUser);
-        } catch (error) {
-            reply.code(400).send({ error: 'Failed to update profile' });
+            // Generate and return JWT token
+            const token = generateJWT(app, user);
+            reply.send({ message: 'Login successful', token });
+        } catch (err) {
+            handleHookError(err, reply, 'Failed to login');
         }
     });
 
-    app.get('/protected', async (request, reply) => {
-        const user = request.user as { id: number; email: string; role: string };
-        reply.send({ message: `Hello, ${user.email}` });
+    /**
+     * Update user profile.
+     * @route PUT /auth/profile
+     * @body name - The updated name.
+     * @body email - The updated email.
+     * @returns The updated user object without the password field.
+     */
+    app.put('/profile', { schema: updateProfileSchema }, async (request: FastifyRequest, reply: FastifyReply) => {
+        try {
+            const { name, email } = request.body as { name: string; email: string };
+            const userId = (request.user as { id: number }).id;
+
+            // Update profile in the database
+            const updatedUser = await updateUserProfile(userId, name, email);
+            reply.send(updatedUser);
+        } catch (err) {
+            handleHookError(err, reply, 'Failed to update profile');
+        }
+    });
+
+    /**
+     * Protected route example.
+     * @route GET /auth/protected
+     * @returns A message with the user's email.
+     */
+    app.get('/protected', { schema: protectedRouteSchema }, async (request: FastifyRequest, reply: FastifyReply) => {
+        try {
+            const user = request.user as { id: number; email: string; role: string };
+            reply.send({ id: user.id, message: `Hello, ${user.email}` });
+        } catch (err) {
+            handleHookError(err, reply, 'Failed to access protected route');
+        }
     });
 }
