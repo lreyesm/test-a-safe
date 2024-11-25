@@ -37,9 +37,10 @@ export function generateJWT(app: any, user: { id: number; email: string; role: s
  * @throws An error if the update fails.
  */
 export async function updateUserProfile(userId: number, name: string, email: string) {
-    return await prisma.user.update({
+    const user = await prisma.user.update({
         where: { id: userId },
         data: { name, email },
         select: excludePasswordSelect(),
     });
+    return user;
 }

@@ -25,7 +25,7 @@ export default async function userRoutes(app: FastifyInstance) {
      */
     app.addHook('preHandler', async (request, reply) => {
         const unprotectedRoutes = ['/users/register'];
-        if (!unprotectedRoutes.includes(request.routerPath)) {
+        if (!request.routeOptions.url || !unprotectedRoutes.includes(request.routerPath)) {
             try {
                 await request.jwtVerify();
             } catch (err) {
