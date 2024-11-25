@@ -10,6 +10,8 @@ import { ready, stop } from '../../src/index'; // Import server lifecycle functi
 import { password } from '../utils/utils'; // Utility for test credentials
 import WebSocket from 'ws'; // Import WebSocket library for testing WebSocket connections
 
+const wsServerUrl = process.env.WS_SERVER_URL || 'ws://localhost:3000/ws';
+
 // Declare variables for supertest request and admin token
 let request: supertest.SuperTest<supertest.Test>;
 let adminToken: string;
@@ -39,7 +41,7 @@ describe('Broadcast Routes', () => {
      * Test: Connect to the WebSocket endpoint and send a message.
      */
     it('should connect to the WebSocket endpoint and send a message', async () => {
-        const ws = new WebSocket(`ws://localhost:3000/ws?token=${adminToken}`);
+        const ws = new WebSocket(`${wsServerUrl}?token=${adminToken}`);
 
         ws.on('open', () => {
             ws.send(JSON.stringify({ message: 'Hello WebSocket' })); // Send a message upon connection
@@ -93,7 +95,7 @@ describe('Broadcast Routes', () => {
      * Test: Fail WebSocket connection with an invalid token.
      */
     it('should fail WebSocket connection with invalid token', async () => {
-        const ws = new WebSocket(`ws://localhost:3000/ws?token=invalid_token`);
+        const ws = new WebSocket(`${wsServerUrl}?token=invalid_token`);
 
         ws.on('close', (code) => {
             expect(code).toBe(1006); // Connection closed abnormally

@@ -1,6 +1,12 @@
 import { FastifyInstance } from 'fastify';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
+import dotenv from 'dotenv';
+
+// Load environment variables from the .env file
+dotenv.config();
+
+const port = parseInt(process.env.PORT || '3000', 10); 
 
 export async function setupSwagger(app: FastifyInstance) {
     // Register the plugin @fastify/swagger
@@ -13,7 +19,7 @@ export async function setupSwagger(app: FastifyInstance) {
             },
             servers: [
                 {
-                    url: 'http://localhost:3000',
+                    url: `http://localhost:${port}`,
                 },
             ],
         },

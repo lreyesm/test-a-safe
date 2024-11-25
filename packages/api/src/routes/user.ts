@@ -7,10 +7,11 @@ import {
     getProfilePicture,
     validateUserData,
     createUserInDB,
+    getUserData,
 } from '../services/user.service';
 import { handleHookError, handleHttpError, handleServiceError } from '../services/error.service';
 import { hashPassword } from '../services/password.service';
-import { deleteUserSchema, getAllUsersSchema, getProfilePictureSchema, registerUserSchema, updateUserSchema, updateUserSwaggerSchema } from '../schemas/user.schema';
+import { deleteUserSchema, getAllUsersSchema, getProfilePictureSchema, getUserSchema, registerUserSchema, updateUserSchema, updateUserSwaggerSchema } from '../schemas/user.schema';
 
 /**
  * User-related HTTP routes for Fastify.
@@ -125,6 +126,29 @@ export default async function userRoutes(app: FastifyInstance) {
             reply.code(201).send({ message: 'User registered successfully', user });
         } catch (error) {
             handleServiceError(error, reply, 'Error creating user');
+        }
+    });
+
+    
+    /**
+     * Route to fetch a user's data.
+     * 
+     * @route POST /users/data
+     * @param { string } email - The email of the user.
+     * @response { user } - The user found
+     */
+    app.post('/data', { schema: getUserSchema }, async (request: FastifyRequest, reply: FastifyReply) => {
+        try {
+            const { email } = request.body as any;
+
+            // Get the user in the database
+            const user = await getUserData(email);
+
+            if(user) reply.code(200).send({ message: 'User found', user });
+            else reply.code(204).send();
+
+        } catch (error) {
+            handleServiceError(error, reply, 'Failed to retrieve user');
         }
     });
 }

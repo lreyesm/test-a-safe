@@ -8,7 +8,7 @@ const prisma = new PrismaClient();
 module.exports = async () => {
     console.log('Setting up the test database...');
     // Run migrations
-    execSync('cross-env DATABASE_URL=postgresql://postgres:26194larm@localhost:5432/mydatabase_test npx prisma migrate dev --name init_test', {
+    execSync('cross-env DATABASE_URL=postgresql://postgres:password@localhost:5432/mydatabase_test npx prisma migrate dev --name init_test', {
         stdio: 'inherit',
     });
 

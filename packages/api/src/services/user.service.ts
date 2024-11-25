@@ -148,3 +148,21 @@ export async function createUserInDB(data: { name: string; email: string; hashed
         throw new Error('Database Error: Failed to create user');
     }
 }
+
+/**
+ * Retrieves user data based on the provided email.
+ *
+ * @param {string} email - The email of the user to retrieve.
+ * @returns {Promise<object | null>} A promise that resolves to the user data excluding the password, or null if no user is found.
+ * @throws {Error} If there is an error retrieving the user data.
+ */
+export async function getUserData(email: string): Promise<object | null> {
+    try {
+        return await prisma.user.findUnique({
+            where: { email: email },
+            select: excludePasswordSelect(),
+        });
+    } catch (error) {
+        throw new Error('Failed to retrieve user');
+    }
+}

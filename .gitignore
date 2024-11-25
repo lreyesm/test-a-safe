@@ -39,4 +39,6 @@ coverage/
 # Upload files
 uploads/
 
+.env.test 
+
 get-encripted-pass-bcrypt.ts

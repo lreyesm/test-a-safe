@@ -13,7 +13,11 @@ import { ready } from '../../src';
 import supertest from 'supertest';
 import { password } from '../utils/utils';
 
-const wsServerUrl = 'ws://localhost:3000/ws'; // URL for WebSocket connection
+
+// REST and WebSocket server URLs, configurable via .env
+const wsServerUrl = process.env.WS_SERVER_URL || 'ws://localhost:3000/ws';    // Default to localhost:3000/ws
+
+
 // Declare variables for supertest request and admin token
 let request: supertest.SuperTest<supertest.Test>;
 let adminToken: string = '';
