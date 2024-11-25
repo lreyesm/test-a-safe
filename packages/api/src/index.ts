@@ -5,20 +5,16 @@ import fastifyJWT from '@fastify/jwt';
 import multipart from '@fastify/multipart';
 import path from 'path';
 
-// Route imports
-import userRoutes from './routes/user';
-import uploadRoutes from './routes/upload';
-import postRoutes from './routes/post';
-import adminRoutes from './routes/admin';
-import authRoutes from './routes/auth';
-import messageRoutes from './routes/message';
-import { broadcastRoutes } from './routes/broadcast';
-
 // Utility and service imports
 import { ensureUploadDirExists, maxFileSize } from './utils/upload';
+import { registerRoutes } from './utils/routes';
+import { setupSwagger } from './plugins/swagger';
 
 // Create the Fastify app instance with logging enabled
 const app = Fastify({ logger: process.env.NODE_ENV !== 'test' });
+
+// Configura Swagger
+setupSwagger(app);
 
 // Ensure the upload directory exists
 ensureUploadDirExists();
@@ -47,14 +43,7 @@ app.register(fastifyStatic, {
     prefix: '/uploads/',
 });
 
-// Register application routes
-app.register(authRoutes, { prefix: '/auth' }); // Authentication routes
-app.register(userRoutes, { prefix: '/users' }); // User management routes
-app.register(uploadRoutes, { prefix: '/upload' }); // File upload routes
-app.register(postRoutes, { prefix: '/posts' }); // Post management routes
-app.register(adminRoutes, { prefix: '/admin' }); // Admin-specific routes
-app.register(messageRoutes, { prefix: '/messages' }); // Messaging routes
-app.register(broadcastRoutes); // WebSocket broadcast routes
+registerRoutes(app);
 
 // Custom 404 handler
 app.setNotFoundHandler((request, reply) => {
