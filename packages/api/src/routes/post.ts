@@ -1,6 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import { getAllPosts, createNewPost, updatePost, deletePostById } from '../services/post.service';
 import { handleHttpError } from '../services/error.service';
+import { createPostSwaggerSchema, deletePostSchema, getAllPostsSchema, updatePostSwaggerSchema } from '../schemas/post.schema';
 
 /**
  * Post-related HTTP routes for Fastify.
@@ -33,7 +34,7 @@ export default async function postRoutes(app: FastifyInstance) {
      * @route GET /posts
      * @response { object[] } - The list of posts.
      */
-    app.get('/', async (_request, reply) => {
+    app.get('/', { schema: getAllPostsSchema }, async (_request, reply) => {
         try {
             const posts = await getAllPosts();
             reply.code(200).send(posts);
@@ -52,7 +53,7 @@ export default async function postRoutes(app: FastifyInstance) {
      * @body { title: string, content: string, authorId: number } - The post data.
      * @response { object } - The created post.
      */
-    app.post('/', async (request, reply) => {
+    app.post('/', { schema: createPostSwaggerSchema }, async (request, reply) => {
         try {
             const post = await createNewPost(request.body);
             reply.code(201).send(post);
@@ -70,7 +71,7 @@ export default async function postRoutes(app: FastifyInstance) {
      * @param { string } id - The ID of the post to update.
      * @response { object } - The updated post.
      */
-    app.put('/:id', async (request, reply) => {
+    app.put('/:id', { schema: updatePostSwaggerSchema }, async (request, reply) => {
         const { id } = request.params as { id: string };
 
         try {
@@ -92,7 +93,7 @@ export default async function postRoutes(app: FastifyInstance) {
      * @param { string } id - The ID of the post to delete.
      * @response { void }
      */
-    app.delete('/:id', async (request, reply) => {
+    app.delete('/:id', { schema: deletePostSchema }, async (request, reply) => {
         const { id } = request.params as { id: string };
 
         try {

@@ -10,6 +10,7 @@ import {
 } from '../services/user.service';
 import { handleHookError, handleHttpError, handleServiceError } from '../services/error.service';
 import { hashPassword } from '../services/password.service';
+import { deleteUserSchema, getAllUsersSchema, getProfilePictureSchema, registerUserSchema, updateUserSchema, updateUserSwaggerSchema } from '../schemas/user.schema';
 
 /**
  * User-related HTTP routes for Fastify.
@@ -40,7 +41,7 @@ export default async function userRoutes(app: FastifyInstance) {
      * @route GET /users
      * @response { object[] } - The list of users.
      */
-    app.get('/', async (_request, reply) => {
+    app.get('/', { schema: getAllUsersSchema }, async (_request, reply) => {
         try {
             const users = await getAllUsers();
             reply.code(200).send(users);
@@ -56,7 +57,7 @@ export default async function userRoutes(app: FastifyInstance) {
      * @param { string } id - The ID of the user to update.
      * @response { object } - The updated user.
      */
-    app.put('/:id', async (request, reply) => {
+    app.put('/:id', { schema: updateUserSwaggerSchema }, async (request, reply) => {
         const { id } = request.params as { id: string };
 
         try {
@@ -75,7 +76,7 @@ export default async function userRoutes(app: FastifyInstance) {
      * @param { string } id - The ID of the user to delete.
      * @response { void }
      */
-    app.delete('/:id', async (request, reply) => {
+    app.delete('/:id', { schema: deleteUserSchema }, async (request, reply) => {
         const { id } = request.params as { id: string };
 
         try {
@@ -93,7 +94,7 @@ export default async function userRoutes(app: FastifyInstance) {
      * @param { string } id - The ID of the user.
      * @response { file } - The profile picture file.
      */
-    app.get('/:id/profile-picture', async (request, reply) => {
+    app.get('/:id/profile-picture', { schema: getProfilePictureSchema }, async (request, reply) => {
         const { id } = request.params as { id: string };
 
         try {
@@ -104,15 +105,13 @@ export default async function userRoutes(app: FastifyInstance) {
         }
     });
 
-    
-
     /**
      * Register a new user.
      * @route POST /admin/register
      * @param body - The user data including name, email, password, and role.
      * @returns A success message and the created user object.
      */
-    app.post('/register', async (request: FastifyRequest, reply: FastifyReply) => {
+    app.post('/register', { schema: registerUserSchema }, async (request: FastifyRequest, reply: FastifyReply) => {
         try {
             // Validate user data
             const { name, email, password, role } = validateUserData(request.body as any);

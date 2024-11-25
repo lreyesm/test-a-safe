@@ -1,6 +1,6 @@
-import { PrismaClient } from '@prisma/client';
 import { excludePasswordSelect } from '../utils/user';
 import { verifyPassword } from './password.service';
+import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 

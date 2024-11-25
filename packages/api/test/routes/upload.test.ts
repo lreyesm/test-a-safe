@@ -78,35 +78,4 @@ describe('Profile Picture Upload', () => {
         expect(response.status).toBe(406);
         expect(response.body.error).toBe('Not Acceptable');
     });
-
-    // /**
-    //  * Test: Fail to upload an invalid file type.
-    //  */
-    // it('should fail to upload an invalid file type', async () => {
-    //     const filePath = path.join(__dirname, '../files/test-document.txt'); // Provide an invalid file type
-    //     const response = await request
-    //         .post('/upload/profile-picture')
-    //         .set('Authorization', `Bearer ${userToken}`)
-    //         .attach('file', filePath); // Attach the file to the request
-
-    //     console.log('Response:', response.body);
-    //     // Assert the response
-    //     expect(response.status).toBe(400);
-    //     expect(response.body.error).toBe('Invalid file type. Only JPG and PNG are allowed.');
-    // });
-
-    // /**
-    //  * Test: Fail to upload without authentication.
-    //  */
-    // it('should fail to upload without authentication', async () => {
-    //     const filePath = path.join(__dirname, '../files/test-image.png'); // Provide a valid file path
-    //     const response = await request.post('/upload/profile-picture').attach('file', filePath);
-
-    //     console.log('============= response =============');
-    //     console.log(response.body);
-
-    //     // Assert the response
-    //     expect(response.status).toBe(401);
-    //     expect(response.body.error).toBe('Unauthorized');
-    // });
 });

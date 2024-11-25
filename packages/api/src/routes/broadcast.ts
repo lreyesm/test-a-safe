@@ -6,14 +6,15 @@ import {
     notifyUser,
     notifyUsersByRole,
 } from '../services/broadcast.service';
+import { broadcastSchema, notifyRoleSchema, notifyUserSchema, webSocketSchema } from '../schemas/broadcast.schema';
 
 export async function broadcastRoutes(app: FastifyInstance) {
     
     /**
      * WebSocket endpoint for clients to connect.
      */
-    app.get('/ws', { websocket: true }, (connection, req) => {
-        handleWebSocketConnection(app, connection.socket as WebSocket, req);
+    app.get('/ws', { websocket: true, schema: webSocketSchema }, (connection, req) => {
+        handleWebSocketConnection(app, connection.socket as unknown as WebSocket, req);
     });
 
     /**
@@ -21,7 +22,7 @@ export async function broadcastRoutes(app: FastifyInstance) {
      * @route GET /broadcast
      * @query message - The message to broadcast.
      */
-    app.get('/broadcast', async (request: FastifyRequest, reply: FastifyReply) => {
+    app.get('/broadcast', { schema: broadcastSchema }, async (request: FastifyRequest, reply: FastifyReply) => {
         const { message } = request.query as { message?: string };
         if (!message) {
             return reply.status(400).send({ error: 'Message is required' });
@@ -37,7 +38,7 @@ export async function broadcastRoutes(app: FastifyInstance) {
      * @query userId - The ID of the user to notify.
      * @query message - The notification message.
      */
-    app.get('/notify', async (request: FastifyRequest, reply: FastifyReply) => {
+    app.get('/notify', { schema: notifyUserSchema }, async (request: FastifyRequest, reply: FastifyReply) => {
         const { userId, message } = request.query as { userId?: string; message?: string };
         if (!userId || !message) {
             return reply.status(400).send({ error: 'User ID and message are required' });
@@ -53,7 +54,7 @@ export async function broadcastRoutes(app: FastifyInstance) {
      * @query role - The role to filter users by.
      * @query message - The notification message.
      */
-    app.get('/notify/role', async (request: FastifyRequest, reply: FastifyReply) => {
+    app.get('/notify/role', { schema: notifyRoleSchema }, async (request: FastifyRequest, reply: FastifyReply) => {
         const { role, message } = request.query as { role?: string; message?: string };
         if (!role || !message) {
             return reply.status(400).send({ error: 'Role and message are required' });

@@ -3,7 +3,7 @@ import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
 
 export async function setupSwagger(app: FastifyInstance) {
-    // Registrar el plugin @fastify/swagger
+    // Register the plugin @fastify/swagger
     app.register(swagger, {
         openapi: {
             info: {
@@ -19,15 +19,14 @@ export async function setupSwagger(app: FastifyInstance) {
         },
     });
 
-    // Registrar el plugin @fastify/swagger-ui para la UI
+    // Register the plugin @fastify/swagger-ui para la UI
     app.register(swaggerUi, {
-        routePrefix: '/docs', // Ruta para la documentación
+        routePrefix: '/docs', // documentation route
         staticCSP: true,
         uiConfig: {
             docExpansion: 'list',
             deepLinking: true,
         },
         transformStaticCSP: (header) => header,
-        // exposeRoute: true,
     });
 }

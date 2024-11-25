@@ -104,8 +104,8 @@ describe('Post Routes', () => {
             .set('Authorization', `Bearer ${userToken}`);
 
         // Assert the response
-        expect(response.status).toBe(500);
-        expect(response.body.error).toContain('Validation Error');
+        expect(response.status).toBe(400);
+        expect(response.body.error).toContain('Bad Request');
     });
 
     /**

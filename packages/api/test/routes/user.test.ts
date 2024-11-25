@@ -128,14 +128,7 @@ describe('User Routes', () => {
         expect(response.status).toBe(400);
     
         // Assert the response body
-        expect(response.body.error).toEqual([
-            {
-                code: 'invalid_string',
-                message: 'Invalid email address',
-                path: ['email'],
-                validation: 'email',
-            },
-        ]);
+        expect(response.body.error).toEqual('Bad Request');
     });
     
 
@@ -148,7 +141,7 @@ describe('User Routes', () => {
             .send({ email: 'invalidemail' }) // Invalid email
             .set('Authorization', `Bearer ${userToken}`);
 
-        expect(response.status).toBe(500);
-        expect(response.body.error).toContain('Failed to update user');
+        expect(response.status).toBe(400);
+        expect(response.body.error).toContain('Bad Request');
     });
 });

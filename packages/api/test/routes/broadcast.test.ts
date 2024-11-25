@@ -86,7 +86,7 @@ describe('Broadcast Routes', () => {
 
         // Validate the error response
         expect(response.status).toBe(400);
-        expect(response.body.error).toBe('Message is required');
+        expect(response.body.error).toBe('Bad Request');
     });
 
     /**

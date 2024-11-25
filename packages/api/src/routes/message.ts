@@ -1,6 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import { sendMessage, getMessagesBetweenUsers, validateMessageInput } from '../services/message.service';
 import { handleHttpError } from '../services/error.service';
+import { getMessagesSchema, sendMessageSchema } from '../schemas/message.schema';
 
 /**
  * Message-related HTTP routes for Fastify.
@@ -34,7 +35,7 @@ export default async function messageRoutes(app: FastifyInstance) {
      * @body { content: string, receiverId: number } - The message content and the recipient's user ID.
      * @response { status: string, message: object } - Confirmation of the sent message.
      */
-    app.post('/', async (request, reply) => {
+    app.post('/', { schema: sendMessageSchema }, async (request, reply) => {
         const { content, receiverId } = request.body as { content: string; receiverId: number };
         const senderId = (request.user as any).id; // Retrieve the sender's ID from the authenticated user
 
@@ -59,7 +60,7 @@ export default async function messageRoutes(app: FastifyInstance) {
      * @param { string } userId - The ID of the other user involved in the conversation.
      * @response { object[] } - The list of messages between the two users.
      */
-    app.get('/:userId', async (request, reply) => {
+    app.get('/:userId', { schema: getMessagesSchema }, async (request, reply) => {
         const { userId } = request.params as { userId: string };
         const currentUserId = (request.user as any).id; // Retrieve the current user's ID from the authenticated user
 

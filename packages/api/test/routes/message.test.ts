@@ -76,7 +76,7 @@ describe('Message Routes', () => {
 
         // Assert the response
         expect(response.status).toBe(400);
-        expect(response.body.error).toContain('content is required');
+        expect(response.body.error).toContain('Bad Request');
     });
 
     /**

@@ -6,6 +6,7 @@ import {
 } from '../services/admin.service';
 import { handleHookError, handleServiceError } from '../services/error.service';
 import { hashPassword } from '../services/password.service';
+import { fetchAdminDashboardSchema, performAdminActionSchema } from '../schemas/admin.schema';
 
 export default async function adminRoutes(app: FastifyInstance) {
     /**
@@ -30,7 +31,7 @@ export default async function adminRoutes(app: FastifyInstance) {
      * @route POST /admin/action
      * @returns A success message if the action is performed successfully.
      */
-    app.post('/action', async (request: FastifyRequest, reply: FastifyReply) => {
+    app.post('/action', { schema: performAdminActionSchema }, async (request: FastifyRequest, reply: FastifyReply) => {
         try {
             const result = await performAdminActionService();
             reply.send(result);
@@ -44,7 +45,7 @@ export default async function adminRoutes(app: FastifyInstance) {
      * @route GET /admin/dashboard
      * @returns A success message with admin dashboard information.
      */
-    app.get('/dashboard', async (request: FastifyRequest, reply: FastifyReply) => {
+    app.get('/dashboard', { schema: fetchAdminDashboardSchema }, async (request: FastifyRequest, reply: FastifyReply) => {
         try {
             const result = await fetchAdminDashboardService();
             reply.send(result);

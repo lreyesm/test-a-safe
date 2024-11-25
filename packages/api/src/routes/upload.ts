@@ -1,6 +1,7 @@
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import { validateFile, generateFilePaths, saveFile, updateUserProfilePicture, handleProfilePictureUpload } from '../services/upload.service';
+import { handleProfilePictureUpload } from '../services/upload.service';
 import { handleHttpError } from '../services/error.service';
+import { uploadProfilePictureSchema } from '../schemas/upload.schema';
 
 /**
  * Upload-related HTTP routes for Fastify.
@@ -32,12 +33,12 @@ export default async function uploadRoutes(app: FastifyInstance) {
      * @body { file } - The uploaded file.
      * @response { message: string, url: string } - Confirmation of the upload and the file's public URL.
      */
-    app.post('/profile-picture', async (req: FastifyRequest, reply: FastifyReply) => {
+    app.post('/profile-picture', { schema: uploadProfilePictureSchema }, async (req: FastifyRequest, reply: FastifyReply) => {
         const file = await req.file();
         const user = req.user as { id: number }; 
-
+        
         if (!file) return reply.code(400).send({ error: 'No file uploaded' });
-
+        
         try {
             const fileUrl = await handleProfilePictureUpload(file, user.id, reply);
             if(!fileUrl) return;
