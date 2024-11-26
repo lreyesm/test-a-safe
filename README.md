@@ -8,6 +8,23 @@ Test-A-Safe is a Node.js and Fastify-based API designed to manage authentication
 - Node.js >= 14.x
 - npm or Yarn
 - Configured PostgreSQL database
+- ```bash
+  sudo apt update
+  sudo apt upgrade -y
+  echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
+  wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
+  sudo apt update
+  sudo apt install -y postgresql-17 postgresql-client-17
+  sudo systemctl start postgresql
+  sudo systemctl enable postgresql
+  sudo -i -u postgres
+  psql
+  ALTER USER postgres WITH PASSWORD 'password';
+  CREATE DATABASE db_name;
+  GRANT ALL PRIVILEGES ON DATABASE db_name TO postgres;
+  CREATE DATABASE db_name_test;
+  GRANT ALL PRIVILEGES ON DATABASE db_name_test TO postgres;
+  ```
 - Prisma CLI for schema management
 
 ## Setup
@@ -50,7 +67,7 @@ Test-A-Safe is a Node.js and Fastify-based API designed to manage authentication
 5. **Migrate the database**:
   Run Prisma migrations:
   ```bash
-  npx prisma migrate dev
+  npx prisma migrate dev --name init 
   ```
 
   Run Prisma Populate tables:
