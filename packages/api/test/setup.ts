@@ -5,10 +5,15 @@ import { password } from './utils/utils';
 
 const prisma = new PrismaClient();
 
+const testDatabaseUrl = process.env.DATABASE_URL_TEST;
+if (!testDatabaseUrl) {
+    throw new Error('JWT_SECRET is not defined in .env');
+}
 module.exports = async () => {
     console.log('Setting up the test database...');
+
     // Run migrations
-    execSync('cross-env DATABASE_URL=postgresql://postgres:password@localhost:5432/mydatabase_test npx prisma migrate dev --name init_test', {
+    execSync(`cross-env DATABASE_URL=${testDatabaseUrl} npx prisma migrate dev --name init_test`, {
         stdio: 'inherit',
     });
 
