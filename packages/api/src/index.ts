@@ -9,12 +9,6 @@ import path from 'path';
 import { ensureUploadDirExists, maxFileSize } from './utils/upload';
 import { registerRoutes } from './utils/routes';
 import { setupSwagger } from './plugins/swagger';
-import { executeSQLFile } from './plugins/sqldata';
-
-// Path to the data.sql file
-const sqlFilePath = path.join(__dirname, '../../../prisma/data.sql');
- // Execute the SQL file
-executeSQLFile(sqlFilePath);
 
 // Create the Fastify app instance with logging enabled
 const app = Fastify({ logger: process.env.NODE_ENV !== 'test' });

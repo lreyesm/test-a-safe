@@ -28,6 +28,7 @@ Test-A-Safe is a Node.js and Fastify-based API designed to manage authentication
   Create a `.env` file at the root of the project with the following content:
   ```env
   DATABASE_URL=postgresql://user:password@localhost:5432/db_name
+  DATABASE_URL_TEST=postgresql://user:password@localhost:5432/db_name_test"
   PORT=3000
   JWT_SECRET=your_secret_key
   REST_SERVER_URL=http://localhost
@@ -38,7 +39,7 @@ Test-A-Safe is a Node.js and Fastify-based API designed to manage authentication
 4. **Configure test environment variables**:
   Create a `.env.test` file at the root of the project with the following content:
   ```env.test
-  DATABASE_URL=postgresql://user:password@localhost:5432/db_name
+  DATABASE_URL=postgresql://user:password@localhost:5432/db_name_test"
   PORT=3000
   JWT_SECRET=your_secret_key
   REST_SERVER_URL=http://localhost
@@ -52,7 +53,12 @@ Test-A-Safe is a Node.js and Fastify-based API designed to manage authentication
   npx prisma migrate dev
   ```
 
-6. **Start the server**:
+  Run Prisma Populate tables:
+  ```bash
+  npx prisma db seed
+  ```
+
+1. **Start the server**:
   ```bash
   yarn start
   ```
