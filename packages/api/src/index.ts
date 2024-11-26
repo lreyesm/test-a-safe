@@ -9,6 +9,7 @@ import path from 'path';
 import { ensureUploadDirExists, maxFileSize } from './utils/upload';
 import { registerRoutes } from './utils/routes';
 import { setupSwagger } from './plugins/swagger';
+import { homepage, html404 } from './utils/html';
 
 // Create the Fastify app instance with logging enabled
 const app = Fastify({ logger: process.env.NODE_ENV !== 'test' });
@@ -48,10 +49,15 @@ app.register(fastifyStatic, {
 
 registerRoutes(app);
 
+// Add your routes here
+app.get('/', async (request, reply) => {
+    reply.type('text/html').send(homepage);
+});
+
 // Custom 404 handler
 app.setNotFoundHandler((request, reply) => {
-    reply.code(404).send({ error: 'Route not found' });
-})
+    reply.code(404).type('text/html').send(html404);
+});
 
 const isTestEnv = process.env.NODE_ENV === 'test';
 
